@@ -14,6 +14,7 @@ import com.cristock.repository.HoldingRepository;
 import com.cristock.repository.PlayerRepository;
 import com.cristock.repository.TransactionRepository;
 import com.cristock.repository.UserRepository;
+import com.cristock.service.PriceEngineService;
 import com.cristock.service.TradingService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -31,25 +32,26 @@ public class TradingServiceImpl implements TradingService {
     private final PlayerRepository playerRepository;
     private final HoldingRepository holdingRepository;
     private final TransactionRepository transactionRepository;
+    private final PriceEngineService priceEngineService;
 
     @Override
     @Transactional
     public TransactionResponse buyShares(String userEmail, TradingRequest request) {
 
-        // 1. Find User
+
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new UserNotFoundException("User not found"));
 
-        // 2. Find Player
+
         Player player = playerRepository.findById(request.getPlayerId())
                 .orElseThrow(() -> new PlayerNotFoundException("Player not found"));
 
-        // 3. Check Market Open (Using the player's active status as a proxy for now)
+
         if (!player.getActive()) {
             throw new MarketClosedException("Trading is currently suspended for this player.");
         }
 
-        // 4. Check Available Shares
+
         if (request.getQuantity() <= 0) {
             throw new IllegalArgumentException("Quantity must be greater than zero.");
         }
@@ -57,23 +59,25 @@ public class TradingServiceImpl implements TradingService {
             throw new InsufficientSharesException("Not enough shares available in the market.");
         }
 
-        // 5. Calculate Total Cost
+
         BigDecimal totalCost = player.getCurrentPrice()
                 .multiply(BigDecimal.valueOf(request.getQuantity()))
                 .setScale(2, RoundingMode.HALF_UP);
 
-        // 6. Check Wallet Balance
+
         if (user.getWalletBalance().compareTo(totalCost) < 0) {
             throw new InsufficientFundsException("Insufficient funds in wallet to complete this purchase.");
         }
 
-        // 7. Deduct Wallet
+
         user.setWalletBalance(user.getWalletBalance().subtract(totalCost));
 
-        // 8. Reduce Player Shares
+
         player.setAvailableShares(player.getAvailableShares() - request.getQuantity());
 
-        // 9. Create/Update Holding
+        priceEngineService.updatePriceAfterBuy(player, request.getQuantity());
+
+
         Holding holding = holdingRepository.findByUserAndPlayer(user, player)
                 .orElse(Holding.builder()
                         .user(user)
@@ -82,7 +86,7 @@ public class TradingServiceImpl implements TradingService {
                         .averageBuyPrice(BigDecimal.ZERO)
                         .build());
 
-        // Calculate new average buy price: ((Old Shares * Old Avg Price) + (New Shares * New Price)) / Total Shares
+        // new average buy price: ((Old Shares * Old Avg Price) + (New Shares * New Price)) / Total Shares
         BigDecimal previousInvestment = holding.getAverageBuyPrice()
                 .multiply(BigDecimal.valueOf(holding.getShares()));
 
@@ -99,7 +103,7 @@ public class TradingServiceImpl implements TradingService {
         holding.setShares(totalShares);
         holding.setAverageBuyPrice(averagePrice);
 
-        // 10. Create Transaction
+
         Transaction transaction = Transaction.builder()
                 .user(user)
                 .player(player)
@@ -109,14 +113,13 @@ public class TradingServiceImpl implements TradingService {
                 .totalAmount(totalCost)
                 .build();
 
-        // 11. Save Everything
+
         holdingRepository.save(holding);
-        playerRepository.save(player);
         userRepository.save(user);
 
         Transaction savedTransaction = transactionRepository.save(transaction);
 
-        // 12. Return TransactionResponse
+
         return TransactionResponse.builder()
                 .transactionId(savedTransaction.getId())
                 .playerName(savedTransaction.getPlayer().getName())
@@ -132,49 +135,50 @@ public class TradingServiceImpl implements TradingService {
     @Transactional
     public TransactionResponse sellShares(String userEmail, TradingRequest request) {
 
-        // Validate quantity
+
         if (request.getQuantity() <= 0) {
             throw new IllegalArgumentException("Quantity must be greater than zero.");
         }
 
-        // Find User
+
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new UserNotFoundException("User not found"));
 
-        // Find Player
+
         Player player = playerRepository.findById(request.getPlayerId())
                 .orElseThrow(() -> new PlayerNotFoundException("Player not found"));
 
-        // Check Market Status
         if (!player.getActive()) {
             throw new MarketClosedException("Trading is currently suspended for this player.");
         }
 
-        // Find Holding
+
         Holding holding = holdingRepository.findByUserAndPlayer(user, player)
                 .orElseThrow(() -> new HoldingNotFoundException("You don't own this player."));
 
-        // Check User Shares
+
         if (holding.getShares() < request.getQuantity()) {
             throw new InsufficientSharesException("You do not own enough shares.");
         }
 
-        // Calculate Sale Amount
+
         BigDecimal totalAmount = player.getCurrentPrice()
                 .multiply(BigDecimal.valueOf(request.getQuantity()))
                 .setScale(2, RoundingMode.HALF_UP);
 
-        // Add Money to Wallet
+
         user.setWalletBalance(
                 user.getWalletBalance().add(totalAmount)
         );
 
-        // Return Shares to Market
+
         player.setAvailableShares(
                 player.getAvailableShares() + request.getQuantity()
         );
 
-        // Update Holding
+        priceEngineService.updatePriceAfterSell(player, request.getQuantity());
+
+
         int remainingShares = holding.getShares() - request.getQuantity();
 
         if (remainingShares == 0) {
@@ -184,7 +188,7 @@ public class TradingServiceImpl implements TradingService {
             holdingRepository.save(holding);
         }
 
-        // Create Transaction
+
         Transaction transaction = Transaction.builder()
                 .user(user)
                 .player(player)
@@ -194,13 +198,13 @@ public class TradingServiceImpl implements TradingService {
                 .totalAmount(totalAmount)
                 .build();
 
-        // Save Updates
+
         userRepository.save(user);
-        playerRepository.save(player);
+
 
         Transaction savedTransaction = transactionRepository.save(transaction);
 
-        // Return Response
+
         return TransactionResponse.builder()
                 .transactionId(savedTransaction.getId())
                 .playerName(savedTransaction.getPlayer().getName())
@@ -216,11 +220,11 @@ public class TradingServiceImpl implements TradingService {
     @Transactional(readOnly = true)
     public PortfolioResponse getPortfolio(String userEmail) {
 
-        // Find User
+
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new UserNotFoundException("User not found"));
 
-        // Get Holdings
+
         List<Holding> holdings = holdingRepository.findByUser(user);
 
         BigDecimal investedAmount = BigDecimal.ZERO;
@@ -252,7 +256,7 @@ public class TradingServiceImpl implements TradingService {
                 })
                 .toList();
 
-        // Calculate Totals
+
         for (Holding holding : holdings) {
 
             BigDecimal investment = holding.getAverageBuyPrice()
@@ -281,15 +285,15 @@ public class TradingServiceImpl implements TradingService {
     @Transactional(readOnly = true)
     public List<TransactionResponse> getTransactionHistory(String userEmail) {
 
-        // Find User
+
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new UserNotFoundException("User not found"));
 
-        // Fetch Transactions
+
         List<Transaction> transactions =
                 transactionRepository.findByUserOrderByCreatedAtDesc(user);
 
-        // Convert to Response DTO
+
         return transactions.stream()
                 .map(transaction -> TransactionResponse.builder()
                         .transactionId(transaction.getId())
