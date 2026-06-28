@@ -30,22 +30,21 @@ public class SecurityConfig {
 
                 .authorizeHttpRequests(auth -> auth
 
-                        // Public APIs
-                        .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers(
+                                "/api/auth/**",
+                                "/swagger-ui/**",
+                                "/v3/api-docs/**",
+                                "/swagger-ui.html"
+                        ).permitAll()
 
-                        // Player APIs
                         .requestMatchers(HttpMethod.GET, "/api/players/**").permitAll()
 
-                        // Admin APIs
                         .requestMatchers(HttpMethod.POST, "/api/players/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/players/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/players/**").hasRole("ADMIN")
 
-                        // Trading APIs
-                        .requestMatchers("/api/trading/**")
-                        .hasAnyRole("USER", "ADMIN")
+                        .requestMatchers("/api/trading/**").hasAnyRole("USER", "ADMIN")
 
-                        // Everything else
                         .anyRequest().authenticated()
                 )
 
