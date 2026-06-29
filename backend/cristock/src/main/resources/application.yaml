@@ -1,24 +1,22 @@
 spring:
   profiles:
-    active: local
+    active: ${SPRING_PROFILE:local}
   application:
     name: cristock
-
   datasource:
-    url: jdbc:postgresql://localhost:5432/cristock_db
+    url: ${DB_URL}
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
-
   jpa:
     hibernate:
       ddl-auto: update
-    show-sql: true
+    show-sql: false
     properties:
-      hibernate.hibernate.format_sql: true
+      hibernate:
+        format_sql: false
 
 server:
-  port: 8080
-
+  port: ${PORT:8080}
 
 jwt:
   secret: ${JWT_SECRET}
@@ -27,3 +25,6 @@ jwt:
 admin:
   email: ${ADMIN_EMAIL}
   password: ${ADMIN_PASSWORD}
+
+cors:
+  allowed-origins: ${FRONTEND_URL:http://localhost:5173}
