@@ -27,7 +27,7 @@ export default function Sidebar() {
               <path d="M15.5 16a5 5 0 0 0 2.5-6.5"/>
             </svg>
           </div>
-          <span className="font-sans font-semibold text-white text-lg tracking-tight">Cricket SE</span>
+          <span className="font-sans font-semibold text-white text-lg tracking-tight">CriStock</span>
         </div>
 
 
