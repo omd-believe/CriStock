@@ -1,6 +1,7 @@
 package com.cristock.service;
 
 import com.cristock.dto.request.CreatePlayerRequest;
+import com.cristock.dto.response.ChartDataResponse;
 import com.cristock.dto.response.PlayerResponse;
 
 import java.util.List;
@@ -16,4 +17,6 @@ public interface PlayerService {
     PlayerResponse updatePlayer(Long id, CreatePlayerRequest request);
 
     void deletePlayer(Long id);
+
+    public List<ChartDataResponse> getPlayerChartData(Long playerId, String timeframe);
 }

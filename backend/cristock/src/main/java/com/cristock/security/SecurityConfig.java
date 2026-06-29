@@ -18,49 +18,46 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http)
-            throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
         http
+                .cors(cors -> {})
                 .csrf(csrf -> csrf.disable())
-
                 .sessionManagement(session ->
-                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-                )
-
+                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+
 
                         .requestMatchers(
                                 "/api/auth/**",
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
-                                "/swagger-ui.html"
+                                "/swagger-ui.html",
+                                "/ws/**"
                         ).permitAll()
 
-                        .requestMatchers(HttpMethod.GET, "/api/players/**").permitAll()
 
+                        .requestMatchers(HttpMethod.GET, "/api/players/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/players/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/players/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/players/**").hasRole("ADMIN")
+
+
+                        .requestMatchers(HttpMethod.GET, "/api/leaderboard/**").permitAll()
+
 
                         .requestMatchers("/api/trading/**").hasAnyRole("USER", "ADMIN")
 
                         .anyRequest().authenticated()
                 )
-
-                .addFilterBefore(
-                        jwtAuthenticationFilter,
-                        UsernamePasswordAuthenticationFilter.class
-                );
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
 
     @Bean
-    public AuthenticationManager authenticationManager(
-            AuthenticationConfiguration configuration)
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration configuration)
             throws Exception {
-
         return configuration.getAuthenticationManager();
     }
 }

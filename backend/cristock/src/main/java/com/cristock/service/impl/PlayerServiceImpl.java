@@ -1,6 +1,7 @@
 package com.cristock.service.impl;
 
 import com.cristock.dto.request.CreatePlayerRequest;
+import com.cristock.dto.response.ChartDataResponse;
 import com.cristock.dto.response.PlayerResponse;
 import com.cristock.entity.Player;
 import com.cristock.exception.PlayerAlreadyExistsException;
@@ -12,8 +13,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Random;
 import java.util.stream.Collectors;
 
 @Service
@@ -120,5 +126,53 @@ public class PlayerServiceImpl implements PlayerService {
                 .marketCap(player.getMarketCap())
                 .active(player.getActive())
                 .build();
+    }
+
+    @Override
+    public List<ChartDataResponse> getPlayerChartData(Long playerId, String timeframe) {
+       Player player = playerRepository.findById(playerId)
+                .orElseThrow(() -> new RuntimeException("Player not found"));
+
+        BigDecimal basePrice = player.getCurrentPrice();
+        List<ChartDataResponse> chartData = new ArrayList<>();
+        Random random = new Random();
+
+        int dataPoints = switch (timeframe) {
+            case "1H" -> 12;
+            case "1D" -> 24;
+            case "1W" -> 7;
+            case "1M" -> 30;
+            default -> 24;
+        };
+
+        LocalTime currentTime = LocalTime.now().minusHours(dataPoints);
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm");
+
+
+        BigDecimal currentTrend = basePrice.multiply(BigDecimal.valueOf(0.95)); // Start slightly lower
+
+        for (int i = 0; i < dataPoints; i++) {
+
+            double fluctuation = -0.02 + (0.045 * random.nextDouble());
+            currentTrend = currentTrend.multiply(BigDecimal.valueOf(1 + fluctuation))
+                    .setScale(2, RoundingMode.HALF_UP);
+
+
+            if (currentTrend.compareTo(BigDecimal.ZERO) < 0) {
+                currentTrend = BigDecimal.valueOf(10.00);
+            }
+
+            chartData.add(ChartDataResponse.builder()
+                    .time(currentTime.plusHours(i).format(formatter))
+                    .price(currentTrend)
+                    .build());
+        }
+
+       chartData.add(ChartDataResponse.builder()
+                .time(LocalTime.now().format(formatter))
+                .price(basePrice)
+                .build());
+
+        return chartData;
     }
 }

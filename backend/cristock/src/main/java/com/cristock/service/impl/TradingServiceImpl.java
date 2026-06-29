@@ -4,18 +4,13 @@ import com.cristock.dto.request.TradingRequest;
 import com.cristock.dto.response.HoldingResponse;
 import com.cristock.dto.response.PortfolioResponse;
 import com.cristock.dto.response.TransactionResponse;
-import com.cristock.entity.Holding;
-import com.cristock.entity.Player;
-import com.cristock.entity.Transaction;
-import com.cristock.entity.User;
+import com.cristock.entity.*;
 import com.cristock.enums.TransactionType;
 import com.cristock.exception.*;
-import com.cristock.repository.HoldingRepository;
-import com.cristock.repository.PlayerRepository;
-import com.cristock.repository.TransactionRepository;
-import com.cristock.repository.UserRepository;
+import com.cristock.repository.*;
 import com.cristock.service.PriceEngineService;
 import com.cristock.service.TradingService;
+import com.cristock.service.WebSocketService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,6 +28,8 @@ public class TradingServiceImpl implements TradingService {
     private final HoldingRepository holdingRepository;
     private final TransactionRepository transactionRepository;
     private final PriceEngineService priceEngineService;
+    private final WebSocketService webSocketService;
+    private final PriceHistoryRepository priceHistoryRepository;
 
     @Override
     @Transactional
@@ -76,6 +73,8 @@ public class TradingServiceImpl implements TradingService {
         player.setAvailableShares(player.getAvailableShares() - request.getQuantity());
 
         priceEngineService.updatePriceAfterBuy(player, request.getQuantity());
+
+        webSocketService.sendPriceUpdate(player);
 
 
         Holding holding = holdingRepository.findByUserAndPlayer(user, player)
@@ -177,6 +176,8 @@ public class TradingServiceImpl implements TradingService {
         );
 
         priceEngineService.updatePriceAfterSell(player, request.getQuantity());
+
+        webSocketService.sendPriceUpdate(player);
 
 
         int remainingShares = holding.getShares() - request.getQuantity();
@@ -305,5 +306,13 @@ public class TradingServiceImpl implements TradingService {
                         .timestamp(transaction.getCreatedAt())
                         .build())
                 .toList();
+    }
+
+    private void recordPriceHistory(Player player) {
+        PriceHistory snapshot = PriceHistory.builder()
+                .player(player)
+                .price(player.getCurrentPrice())
+                .build();
+        priceHistoryRepository.save(snapshot);
     }
 }

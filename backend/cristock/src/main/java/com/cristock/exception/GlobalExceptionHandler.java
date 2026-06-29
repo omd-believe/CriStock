@@ -18,15 +18,11 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleValidationExceptions(
-            MethodArgumentNotValidException ex,
-            HttpServletRequest request) {
-
+            MethodArgumentNotValidException ex, HttpServletRequest request) {
         Map<String, String> errors = new HashMap<>();
-
         for (FieldError error : ex.getBindingResult().getFieldErrors()) {
             errors.put(error.getField(), error.getDefaultMessage());
         }
-
         ErrorResponse response = ErrorResponse.builder()
                 .timestamp(LocalDateTime.now())
                 .status(HttpStatus.BAD_REQUEST.value())
@@ -35,51 +31,91 @@ public class GlobalExceptionHandler {
                 .errors(errors)
                 .path(request.getRequestURI())
                 .build();
-
         return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
     }
 
-    @ExceptionHandler(ResourceNotFoundException.class)
-    public ResponseEntity<ErrorResponse> handleResourceNotFound(
-            ResourceNotFoundException ex,
-            HttpServletRequest request) {
 
+
+    @ExceptionHandler(InsufficientFundsException.class)
+    public ResponseEntity<ErrorResponse> handleInsufficientFunds(
+            InsufficientFundsException ex, HttpServletRequest request) {
+        return buildErrorResponse(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(InsufficientSharesException.class)
+    public ResponseEntity<ErrorResponse> handleInsufficientShares(
+            InsufficientSharesException ex, HttpServletRequest request) {
+        return buildErrorResponse(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(HoldingNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleHoldingNotFound(
+            HoldingNotFoundException ex, HttpServletRequest request) {
         return buildErrorResponse(HttpStatus.NOT_FOUND, ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(MarketClosedException.class)
+    public ResponseEntity<ErrorResponse> handleMarketClosed(
+            MarketClosedException ex, HttpServletRequest request) {
+        return buildErrorResponse(HttpStatus.FORBIDDEN, ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(PlayerNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handlePlayerNotFound(
+            PlayerNotFoundException ex, HttpServletRequest request) {
+        return buildErrorResponse(HttpStatus.NOT_FOUND, ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(UserNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleUserNotFound(
+            UserNotFoundException ex, HttpServletRequest request) {
+        return buildErrorResponse(HttpStatus.NOT_FOUND, ex.getMessage(), request);
+    }
+
+
+    @ExceptionHandler(InvalidCredentialsException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidCredentials(
+            InvalidCredentialsException ex, HttpServletRequest request) {
+        return buildErrorResponse(HttpStatus.UNAUTHORIZED, ex.getMessage(), request);
     }
 
     @ExceptionHandler(DuplicateResourceException.class)
     public ResponseEntity<ErrorResponse> handleDuplicateResource(
-            DuplicateResourceException ex,
-            HttpServletRequest request) {
-
+            DuplicateResourceException ex, HttpServletRequest request) {
         return buildErrorResponse(HttpStatus.CONFLICT, ex.getMessage(), request);
     }
 
-    @ExceptionHandler(InvalidCredentialsException.class)
-    public ResponseEntity<ErrorResponse> handleInvalidCredentials(
-            InvalidCredentialsException ex,
-            HttpServletRequest request) {
-
-        return buildErrorResponse(HttpStatus.UNAUTHORIZED, ex.getMessage(), request);
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleResourceNotFound(
+            ResourceNotFoundException ex, HttpServletRequest request) {
+        return buildErrorResponse(HttpStatus.NOT_FOUND, ex.getMessage(), request);
     }
+
+    @ExceptionHandler(PlayerAlreadyExistsException.class)
+    public ResponseEntity<ErrorResponse> handlePlayerAlreadyExists(
+            PlayerAlreadyExistsException ex, HttpServletRequest request) {
+        return buildErrorResponse(HttpStatus.CONFLICT, ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ErrorResponse> handleIllegalArgument(
+            IllegalArgumentException ex, HttpServletRequest request) {
+        return buildErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), request);
+    }
+
+
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGenericException(
-            Exception ex,
-            HttpServletRequest request) {
+            Exception ex, HttpServletRequest request) {
 
-        return buildErrorResponse(
-                HttpStatus.INTERNAL_SERVER_ERROR,
-                "An unexpected error occurred.",
-                request
-        );
+        ex.printStackTrace();
+        return buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR,
+                "An unexpected error occurred.", request);
     }
 
     private ResponseEntity<ErrorResponse> buildErrorResponse(
-            HttpStatus status,
-            String message,
-            HttpServletRequest request) {
-
+            HttpStatus status, String message, HttpServletRequest request) {
         ErrorResponse response = ErrorResponse.builder()
                 .timestamp(LocalDateTime.now())
                 .status(status.value())
@@ -88,7 +124,6 @@ public class GlobalExceptionHandler {
                 .errors(null)
                 .path(request.getRequestURI())
                 .build();
-
         return new ResponseEntity<>(response, status);
     }
 }
