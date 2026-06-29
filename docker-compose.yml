@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: cristock-db
+    environment:
+      POSTGRES_USER: ${DB_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-omd123}
+      POSTGRES_DB: cristock_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - cristock-network
+
+  backend:
+    build:
+      context: ./backend/cristock
+    container_name: cristock-backend
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - DB_URL=jdbc:postgresql://db:5432/cristock_db 
+      - DB_USERNAME=${DB_USERNAME:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-omd123}
+      - JWT_SECRET=${JWT_SECRET:-mySuperSecretKeyForCriStockMakeItLong}
+      - JWT_EXPIRATION=86400000
+   
+      - FRONTEND_URL=http://localhost:5173,http://localhost
+    depends_on:
+      - db
+    networks:
+      - cristock-network
+
+
+  frontend:
+    build:
+      context: ./frontend/cristock-frontend
+      args:
+       
+        - VITE_API_BASE_URL=http://localhost:8080/api
+    container_name: cristock-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - cristock-network
+
+
+volumes:
+  postgres_data:
+
+
+networks:
+  cristock-network:
