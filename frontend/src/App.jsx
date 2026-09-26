@@ -10,6 +10,7 @@ import PlayerDetailPage from './pages/PlayerDetailPage';
 import PortfolioPage from './pages/PortfolioPage';
 import LeaderboardPage from './pages/LeaderboardPage';
 import WatchlistPage from './pages/WatchlistPage';
+import OrdersPage from './pages/OrdersPage';
 
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated } = useAuth();
@@ -31,6 +32,7 @@ function AppRoutes() {
         <Route path="/market" element={<MarketPage />} />
         <Route path="/player/:id" element={<PlayerDetailPage />} />
         <Route path="/portfolio" element={<PortfolioPage />} />
+        <Route path="/orders" element={<OrdersPage />} />
         <Route path="/watchlist" element={<WatchlistPage />} />
         <Route path="/leaderboard" element={<LeaderboardPage />} />
       </Route>

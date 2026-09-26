@@ -58,4 +58,9 @@ public class Holding {
     public void onUpdate() {
         this.updatedAt = LocalDateTime.now();
     }
+
+    @Version
+    private Long version;
+
+
 }

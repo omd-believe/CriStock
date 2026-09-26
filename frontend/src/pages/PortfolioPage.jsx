@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import StatCard from '../components/ui/StatCard';
-import { ArrowUpRight, ArrowDownRight, ChevronDown, ChevronUp } from 'lucide-react';
+import { ArrowUpRight, ArrowDownRight, ChevronDown, ChevronUp, ClipboardList } from 'lucide-react';
 import { getPortfolio, getTransactions } from '../api/portfolio';
 
 export default function PortfolioPage() {
@@ -51,7 +51,10 @@ export default function PortfolioPage() {
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
-      <h1 className="text-2xl font-bold text-white hidden md:block">Your Portfolio</h1>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div><h1 className="text-2xl font-bold text-white">Your Portfolio</h1><p className="mt-1 text-sm text-slate-500">Holdings, realized trades and your available capital.</p></div>
+        <button onClick={() => navigate('/orders')} className="inline-flex items-center justify-center gap-2 rounded-xl border border-cyan-400/20 bg-cyan-400/5 px-4 py-2.5 text-sm font-semibold text-cyan-200 transition hover:bg-cyan-400/10"><ClipboardList size={16} /> View Orders</button>
+      </div>
 
       {/* Grid Pattern for Stat Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

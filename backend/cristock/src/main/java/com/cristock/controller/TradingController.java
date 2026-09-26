@@ -1,11 +1,13 @@
 package com.cristock.controller;
 
 import com.cristock.dto.request.TradingRequest;
+import com.cristock.dto.response.OrderResponse;
 import com.cristock.dto.response.PortfolioResponse;
 import com.cristock.dto.response.TransactionResponse;
 import com.cristock.service.TradingService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -19,7 +21,7 @@ public class TradingController {
     private final TradingService tradingService;
 
     @PostMapping("/buy")
-    public TransactionResponse buyShares(
+    public Object buyShares(
             Authentication authentication,
             @Valid @RequestBody TradingRequest request) {
 
@@ -29,14 +31,14 @@ public class TradingController {
         );
     }
 
-    @PostMapping("/sell")
-    public TransactionResponse sellShares(
-            Authentication authentication,
-            @Valid @RequestBody TradingRequest request) {
 
-        return tradingService.sellShares(
-                authentication.getName(),
-                request
+    @PostMapping("/sell")
+    public ResponseEntity<Object> sellShares(
+            @Valid @RequestBody TradingRequest request,
+            Authentication authentication
+    ) {
+        return ResponseEntity.ok(
+                tradingService.sellShares(authentication.getName(), request)
         );
     }
 
@@ -55,5 +57,29 @@ public class TradingController {
         return tradingService.getTransactionHistory(
                 authentication.getName()
         );
+    }
+
+    @GetMapping("/orders")
+    public ResponseEntity<List<OrderResponse>> getOrders(
+            Authentication authentication
+    ) {
+
+        return ResponseEntity.ok(
+                tradingService.getOrders(authentication.getName())
+        );
+    }
+
+    @DeleteMapping("/orders/{orderId}")
+    public ResponseEntity<Void> cancelOrder(
+            @PathVariable Long orderId,
+            Authentication authentication
+    ) {
+
+        tradingService.cancelOrder(
+                authentication.getName(),
+                orderId
+        );
+
+        return ResponseEntity.noContent().build();
     }
 }

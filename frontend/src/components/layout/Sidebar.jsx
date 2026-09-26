@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutGrid, PieChart, Star, Trophy, LogOut } from 'lucide-react';
+import { LayoutGrid, PieChart, Star, Trophy, LogOut, ClipboardList } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 export default function Sidebar() {
@@ -11,15 +11,16 @@ export default function Sidebar() {
   const navItems = [
     { path: '/market', name: 'Market', icon: LayoutGrid },
     { path: '/portfolio', name: 'Portfolio', icon: PieChart },
+    { path: '/orders', name: 'Orders', icon: ClipboardList },
     { path: '/watchlist', name: 'Watchlist', icon: Star },
     { path: '/leaderboard', name: 'Leaderboard', icon: Trophy },
   ];
 
   return (
-    <div className="w-[240px] h-screen bg-[#0E0E16] border-r border-white/5 fixed left-0 top-0 flex flex-col justify-between">
+    <div className="w-[240px] h-screen bg-[#08111F] border-r border-white/8 fixed left-0 top-0 flex flex-col justify-between">
       <div>
 
-        <div className="h-16 flex items-center px-6 border-b border-white/5">
+        <div className="h-16 flex items-center px-6 border-b border-white/8">
           <div className="w-8 h-8 rounded-full flex items-center justify-center mr-3" style={{ background: 'linear-gradient(135deg, #00FF87 0%, #00C9FF 100%)' }}>
             <svg viewBox="0 0 24 24" fill="none" className="w-5 h-5 text-black" stroke="currentColor" strokeWidth="2">
               <circle cx="12" cy="12" r="10"/>
@@ -54,7 +55,7 @@ export default function Sidebar() {
         </nav>
       </div>
 
-      <div className="p-4 border-t border-white/5">
+      <div className="p-4 border-t border-white/8">
         <div className="flex items-center px-2 mb-4">
           <span className={`w-2 h-2 rounded-full mr-2 ${isMarketOpen ? 'bg-cse-green animate-pulse' : 'bg-[#FF4757]'}`}></span>
           <span className="text-white/60 text-sm font-medium">
@@ -62,7 +63,7 @@ export default function Sidebar() {
           </span>
         </div>
 
-        <div className="flex items-center justify-between bg-white/5 p-3 rounded-xl border border-white/5">
+        <div className="flex items-center justify-between bg-white/5 p-3 rounded-xl border border-white/8">
           <div className="overflow-hidden">
             <p className="text-sm text-white font-medium truncate">{user?.name || 'Trader'}</p>
             <p className="text-xs text-cse-green font-mono mt-0.5 truncate">

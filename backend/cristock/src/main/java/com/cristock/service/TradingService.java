@@ -1,6 +1,7 @@
 package com.cristock.service;
 
 import com.cristock.dto.request.TradingRequest;
+import com.cristock.dto.response.OrderResponse;
 import com.cristock.dto.response.PortfolioResponse;
 import com.cristock.dto.response.TransactionResponse;
 
@@ -8,12 +9,12 @@ import java.util.List;
 
 public interface TradingService {
 
-    TransactionResponse buyShares(
+    Object buyShares(
             String userEmail,
             TradingRequest request
     );
 
-    TransactionResponse sellShares(
+    Object sellShares(
             String userEmail,
             TradingRequest request
     );
@@ -21,4 +22,14 @@ public interface TradingService {
     PortfolioResponse getPortfolio(String userEmail);
 
     List<TransactionResponse> getTransactionHistory(String userEmail);
+
+    List<OrderResponse> getOrders(String userEmail);
+
+    void cancelOrder(
+            String userEmail,
+            Long orderId
+    );
+
+    void expirePendingOrders();
+
 }

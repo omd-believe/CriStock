@@ -95,5 +95,9 @@ public class Player {
                     .setScale(2);
         }
     }
+
+    @Version
+    @Column(nullable = false)
+    private Long version;
 }
 
