@@ -1,13 +1,10 @@
-import { NavLink } from 'react-router-dom';
-import { LayoutGrid, PieChart, Star, Trophy, LogOut, ClipboardList } from 'lucide-react';
+import { NavLink, useNavigate } from 'react-router-dom';
+import { LayoutGrid, PieChart, Star, Trophy, LogOut, ClipboardList, WalletCards, UserRound } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 export default function Sidebar() {
   const { user, logout } = useAuth();
-  
-
-  const isMarketOpen = true; 
-
+  const navigate = useNavigate();
   const navItems = [
     { path: '/market', name: 'Market', icon: LayoutGrid },
     { path: '/portfolio', name: 'Portfolio', icon: PieChart },
@@ -15,70 +12,21 @@ export default function Sidebar() {
     { path: '/watchlist', name: 'Watchlist', icon: Star },
     { path: '/leaderboard', name: 'Leaderboard', icon: Trophy },
   ];
+  const initials = (user?.name || 'Trader').split(' ').map(p => p[0]).slice(0, 2).join('').toUpperCase();
 
   return (
-    <div className="w-[240px] h-screen bg-[#08111F] border-r border-white/8 fixed left-0 top-0 flex flex-col justify-between">
-      <div>
-
-        <div className="h-16 flex items-center px-6 border-b border-white/8">
-          <div className="w-8 h-8 rounded-full flex items-center justify-center mr-3" style={{ background: 'linear-gradient(135deg, #00FF87 0%, #00C9FF 100%)' }}>
-            <svg viewBox="0 0 24 24" fill="none" className="w-5 h-5 text-black" stroke="currentColor" strokeWidth="2">
-              <circle cx="12" cy="12" r="10"/>
-              <path d="M8.5 16a5 5 0 0 1-2.5-6.5"/>
-              <path d="M15.5 16a5 5 0 0 0 2.5-6.5"/>
-            </svg>
-          </div>
-          <span className="font-sans font-semibold text-white text-lg tracking-tight">CriStock</span>
-        </div>
-
-
-        <nav className="mt-6 space-y-1">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            return (
-              <NavLink
-                key={item.path}
-                to={item.path}
-                className={({ isActive }) =>
-                  `flex items-center px-6 py-3 transition-all duration-200 border-l-2 ${
-                    isActive
-                      ? 'bg-cse-green/10 text-cse-green border-cse-green font-medium'
-                      : 'text-white/50 hover:text-white/80 hover:bg-white/5 border-transparent'
-                  }`
-                }
-              >
-                <Icon size={20} className="mr-3" />
-                {item.name}
-              </NavLink>
-            );
-          })}
-        </nav>
+    <aside className="flex h-screen w-[256px] flex-col border-r border-white/7 bg-[#07111f]/95 backdrop-blur-xl">
+      <div className="flex h-[72px] items-center border-b border-white/6 px-5">
+        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-300 to-emerald-300 text-sm font-black text-[#06101b] shadow-lg shadow-cyan-950/30">CS</div>
+        <div className="ml-3"><p className="text-[17px] font-black tracking-tight text-white">CriStock</p><p className="text-[9px] font-bold uppercase tracking-[0.22em] text-cyan-300/60">Cricket exchange</p></div>
       </div>
 
-      <div className="p-4 border-t border-white/8">
-        <div className="flex items-center px-2 mb-4">
-          <span className={`w-2 h-2 rounded-full mr-2 ${isMarketOpen ? 'bg-cse-green animate-pulse' : 'bg-[#FF4757]'}`}></span>
-          <span className="text-white/60 text-sm font-medium">
-            {isMarketOpen ? 'Market Open' : 'Market Closed'}
-          </span>
-        </div>
+      <div className="px-3 pt-5"><p className="px-3 pb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-600">Workspace</p><nav className="space-y-1">{navItems.map((item) => { const Icon=item.icon; return <NavLink key={item.path} to={item.path} className={({isActive}) => `group flex items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-medium transition ${isActive ? 'bg-cyan-300/8 text-cyan-200 shadow-inner shadow-cyan-400/5' : 'text-slate-500 hover:bg-white/[0.035] hover:text-slate-200'}`}><Icon size={18} className="shrink-0" />{item.name}</NavLink>; })}</nav></div>
 
-        <div className="flex items-center justify-between bg-white/5 p-3 rounded-xl border border-white/8">
-          <div className="overflow-hidden">
-            <p className="text-sm text-white font-medium truncate">{user?.name || 'Trader'}</p>
-            <p className="text-xs text-cse-green font-mono mt-0.5 truncate">
-              ₹{user?.walletBalance?.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </p>
-          </div>
-          <button
-            onClick={logout}
-            className="text-white/40 hover:text-cse-red transition-colors duration-200 p-1"
-            title="Logout"
-          >
-            <LogOut size={18} />
-          </button>
-        </div>
+      <div className="mt-auto p-3">
+        <button onClick={() => navigate('/wallet')} className="mb-2 flex w-full items-center gap-3 rounded-xl border border-cyan-300/10 bg-cyan-300/5 p-3 text-left transition hover:border-cyan-300/20 hover:bg-cyan-300/8"><div className="rounded-lg bg-cyan-300/10 p-2 text-cyan-300"><WalletCards size={16} /></div><div className="min-w-0"><p className="text-[10px] font-semibold uppercase tracking-wider text-slate-600">Wallet</p><p className="truncate font-mono text-sm font-semibold text-slate-200">₹{Number(user?.walletBalance || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</p></div></button>
+        <div className="rounded-xl border border-white/6 bg-white/[0.025] p-3"><button onClick={() => navigate('/profile')} className="flex w-full items-center gap-3 text-left"><div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-slate-300 to-slate-500 text-xs font-black text-slate-900">{initials}</div><div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold text-slate-200">{user?.name || 'Trader'}</p><p className="truncate text-xs text-slate-600">{user?.email || 'Account'}</p></div><UserRound size={16} className="text-slate-600" /></button><button onClick={logout} className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border border-white/6 py-2 text-xs font-semibold text-slate-600 transition hover:border-rose-400/15 hover:text-rose-300"><LogOut size={14} /> Sign out</button></div>
       </div>
-    </div>
+    </aside>
   );
 }

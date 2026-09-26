@@ -1,8 +1,3 @@
-export default function StatCard({ label, value }) {
-  return (
-    <div className="bg-[#12121A] rounded-xl p-5 border border-white/5">
-      <p className="text-white/40 text-xs uppercase tracking-wider mb-2">{label}</p>
-      <p className="text-white font-mono text-2xl font-semibold">{value}</p>
-    </div>
-  );
+export default function StatCard({ label, value, hint, icon: Icon }) {
+  return <div className="group rounded-2xl border border-white/8 bg-[#0b1524]/90 p-5 transition duration-200 hover:-translate-y-0.5 hover:border-cyan-300/15 hover:bg-[#0d1929]"><div className="flex items-start justify-between gap-3"><div><p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-600">{label}</p><p className="mt-2 font-mono text-2xl font-bold tracking-tight text-white">{value}</p>{hint && <p className="mt-1 text-xs text-slate-600">{hint}</p>}</div>{Icon && <div className="rounded-xl bg-cyan-300/8 p-2.5 text-cyan-300/80"><Icon size={17}/></div>}</div></div>;
 }

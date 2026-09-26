@@ -1,3 +1,7 @@
-@import "tailwindcss";
+#root { min-height:100vh; }
 
-#root { min-height: 100vh; }
+.card-glow { box-shadow: 0 20px 60px rgba(0,0,0,.22); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior:auto !important; animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important; }
+}

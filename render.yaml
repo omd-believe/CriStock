@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: cristock-backend
+    runtime: docker
+    rootDir: backend/cristock
+    plan: free
+    healthCheckPath: /api/health

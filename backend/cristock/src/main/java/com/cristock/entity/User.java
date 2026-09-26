@@ -32,6 +32,9 @@ public class User {
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal walletBalance;
 
+    @Column(nullable = false, precision = 12, scale = 2)
+    private BigDecimal reservedBalance;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Role role;
@@ -50,6 +53,11 @@ public class User {
         if (walletBalance == null) {
             walletBalance = BigDecimal.valueOf(100000);
         }
+
+        if (reservedBalance == null) {
+            reservedBalance = BigDecimal.ZERO;
+        }
+
 
         if (role == null) {
             role = Role.USER;

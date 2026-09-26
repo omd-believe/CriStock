@@ -47,6 +47,18 @@ public class TradingServiceImpl implements TradingService {
     @Transactional
     public Object buyShares(String userEmail, TradingRequest request) {
 
+        if (request.getQuantity() == null || request.getQuantity() <= 0) {
+            throw new IllegalArgumentException(
+                    "Quantity must be greater than zero."
+            );
+        }
+
+        if (request.getQuantity() > MAX_TRADE_QUANTITY) {
+            throw new IllegalArgumentException(
+                    "You can trade a maximum of " + MAX_TRADE_QUANTITY + " shares at once."
+            );
+        }
+
         if (request.getOrderType() == OrderType.LIMIT) {
 
             if (request.getLimitPrice() == null ||
@@ -58,9 +70,15 @@ public class TradingServiceImpl implements TradingService {
         }
 
 
-        User user = userRepository.findByEmail(userEmail)
-                .orElseThrow(() -> new UserNotFoundException("User not found"));
+        User user;
 
+        if (request.getOrderType() == OrderType.LIMIT) {
+            user = userRepository.findByEmailForUpdate(userEmail)
+                    .orElseThrow(() -> new UserNotFoundException("User not found"));
+        } else {
+            user = userRepository.findByEmail(userEmail)
+                    .orElseThrow(() -> new UserNotFoundException("User not found"));
+        }
 
         Player player = playerRepository.findById(request.getPlayerId())
                 .orElseThrow(() -> new PlayerNotFoundException("Player not found"));
@@ -70,7 +88,26 @@ public class TradingServiceImpl implements TradingService {
             throw new MarketClosedException("Trading is currently suspended for this player.");
         }
 
+// LIMIT BUY
         if (request.getOrderType() == OrderType.LIMIT) {
+
+            BigDecimal orderAmount = request.getLimitPrice()
+                    .multiply(BigDecimal.valueOf(request.getQuantity()))
+                    .setScale(2, RoundingMode.HALF_UP);
+
+            BigDecimal availableBalance = user.getWalletBalance()
+                    .subtract(user.getReservedBalance());
+
+            if (availableBalance.compareTo(orderAmount) < 0) {
+                throw new InsufficientFundsException(
+                        "Insufficient available wallet balance for this LIMIT BUY."
+                );
+            }
+
+            // Reserve the required amount for this pending order
+            user.setReservedBalance(
+                    user.getReservedBalance().add(orderAmount)
+            );
 
             Order order = Order.builder()
                     .user(user)
@@ -83,9 +120,9 @@ public class TradingServiceImpl implements TradingService {
                     .expiresAt(LocalDateTime.now().plusHours(24))
                     .build();
 
-            orderRepository.save(order);
-
             Order savedOrder = orderRepository.save(order);
+
+            userRepository.save(user);
 
             return OrderResponse.builder()
                     .orderId(savedOrder.getId())
@@ -98,47 +135,48 @@ public class TradingServiceImpl implements TradingService {
                     .limitPrice(savedOrder.getLimitPrice())
                     .createdAt(savedOrder.getCreatedAt())
                     .updatedAt(savedOrder.getUpdatedAt())
+                    .expiresAt(savedOrder.getExpiresAt())
                     .build();
         }
 
-        if (request.getQuantity() <= 0) {
-            throw new IllegalArgumentException("Quantity must be greater than zero.");
-        }
-
-        if (request.getQuantity() > MAX_TRADE_QUANTITY) {
-            throw new IllegalArgumentException(
-                    "You can trade a maximum of " + MAX_TRADE_QUANTITY + " shares at once."
+        // MARKET BUY
+        if (player.getAvailableShares() < request.getQuantity()) {
+            throw new InsufficientSharesException(
+                    "Not enough shares available in the market."
             );
         }
 
-        if (player.getAvailableShares() < request.getQuantity()) {
-            throw new InsufficientSharesException("Not enough shares available in the market.");
-        }
-
-
         BigDecimal executionPrice = player.getCurrentPrice();
 
-        BigDecimal totalCost = player.getCurrentPrice()
+        BigDecimal totalCost = executionPrice
                 .multiply(BigDecimal.valueOf(request.getQuantity()))
                 .setScale(2, RoundingMode.HALF_UP);
 
-
         if (user.getWalletBalance().compareTo(totalCost) < 0) {
-            throw new InsufficientFundsException("Insufficient funds in wallet to complete this purchase.");
+            throw new InsufficientFundsException(
+                    "Insufficient funds in wallet to complete this purchase."
+            );
         }
 
+        user.setWalletBalance(
+                user.getWalletBalance().subtract(totalCost)
+        );
 
-        user.setWalletBalance(user.getWalletBalance().subtract(totalCost));
+        player.setAvailableShares(
+                player.getAvailableShares() - request.getQuantity()
+        );
 
+        priceEngineService.updatePriceAfterBuy(
+                player,
+                request.getQuantity()
+        );
 
-        player.setAvailableShares(player.getAvailableShares() - request.getQuantity());
-
-        priceEngineService.updatePriceAfterBuy(player, request.getQuantity());
         recordPriceHistory(player);
+
         executePendingBuyOrders(player);
         executePendingSellOrders(player);
-        sendPriceUpdateAfterCommit(player);
 
+        sendPriceUpdateAfterCommit(player);
 
         Holding holding = holdingRepository.findByUserAndPlayer(user, player)
                 .orElse(Holding.builder()
@@ -148,13 +186,13 @@ public class TradingServiceImpl implements TradingService {
                         .averageBuyPrice(BigDecimal.ZERO)
                         .build());
 
-        // new average buy price: ((Old Shares * Old Avg Price) + (New Shares * New Price)) / Total Shares
         BigDecimal previousInvestment = holding.getAverageBuyPrice()
                 .multiply(BigDecimal.valueOf(holding.getShares()));
 
         BigDecimal totalInvestment = previousInvestment.add(totalCost);
 
-        int totalShares = holding.getShares() + request.getQuantity();
+        int totalShares =
+                holding.getShares() + request.getQuantity();
 
         BigDecimal averagePrice = totalInvestment.divide(
                 BigDecimal.valueOf(totalShares),
@@ -165,7 +203,6 @@ public class TradingServiceImpl implements TradingService {
         holding.setShares(totalShares);
         holding.setAverageBuyPrice(averagePrice);
 
-
         Transaction transaction = Transaction.builder()
                 .user(user)
                 .player(player)
@@ -175,12 +212,11 @@ public class TradingServiceImpl implements TradingService {
                 .totalAmount(totalCost)
                 .build();
 
-
         holdingRepository.save(holding);
         userRepository.save(user);
 
-        Transaction savedTransaction = transactionRepository.save(transaction);
-
+        Transaction savedTransaction =
+                transactionRepository.save(transaction);
 
         return TransactionResponse.builder()
                 .transactionId(savedTransaction.getId())
@@ -201,6 +237,12 @@ public class TradingServiceImpl implements TradingService {
 
         if (request.getQuantity() <= 0) {
             throw new IllegalArgumentException("Quantity must be greater than zero.");
+        }
+
+        if (request.getQuantity() > MAX_TRADE_QUANTITY) {
+            throw new IllegalArgumentException(
+                    "You can trade a maximum of " + MAX_TRADE_QUANTITY + " shares at once."
+            );
         }
 
 
@@ -258,11 +300,36 @@ public class TradingServiceImpl implements TradingService {
         }
 
         Holding holding = holdingRepository.findByUserAndPlayer(user, player)
-                .orElseThrow(() -> new HoldingNotFoundException("You don't own this player."));
-
+                .orElseThrow(() ->
+                        new HoldingNotFoundException("You don't own this player.")
+                );
 
         if (holding.getShares() < request.getQuantity()) {
-            throw new InsufficientSharesException("You do not own enough shares.");
+            throw new InsufficientSharesException(
+                    "You do not own enough shares."
+            );
+        }
+
+        List<Order> pendingSellOrders =
+                orderRepository.findByUser_IdAndPlayer_IdAndStatusAndTransactionType(
+                        user.getId(),
+                        player.getId(),
+                        OrderStatus.PENDING,
+                        TransactionType.SELL
+                );
+
+        int pendingSellQuantity = pendingSellOrders.stream()
+                .mapToInt(Order::getQuantity)
+                .sum();
+
+        int availableToSell =
+                holding.getShares() - pendingSellQuantity;
+
+        if (request.getQuantity() > availableToSell) {
+            throw new InsufficientSharesException(
+                    "You already have " + pendingSellQuantity +
+                            " shares committed to pending sell orders."
+            );
         }
 
 
@@ -485,21 +552,25 @@ public class TradingServiceImpl implements TradingService {
                         TransactionType.SELL
                 );
 
+        LocalDateTime now = LocalDateTime.now();
+
         for (Order order : pendingOrders) {
 
             if (order.getExpiresAt() != null &&
-                    order.getExpiresAt().isBefore(LocalDateTime.now())) {
+                    order.getExpiresAt().isBefore(now)) {
 
                 order.setStatus(OrderStatus.EXPIRED);
                 orderRepository.save(order);
                 continue;
             }
 
+            if (player.getCurrentPrice().compareTo(order.getLimitPrice()) < 0) {
+                continue;
+            }
 
             executeSellOrder(order, player);
         }
     }
-
     private void executeSellOrder(Order order, Player player) {
 
         User user = order.getUser();
@@ -564,19 +635,39 @@ public class TradingServiceImpl implements TradingService {
                 .multiply(BigDecimal.valueOf(order.getQuantity()))
                 .setScale(2, RoundingMode.HALF_UP);
 
-        if (user.getWalletBalance().compareTo(totalCost) < 0) {
-            order.setStatus(OrderStatus.REJECTED);
-            orderRepository.save(order);
-            return;
-        }
+        /*
+         * The order already has this amount reserved.
+         * The actual execution price can be different from the limit price,
+         * so calculate the final amount using the current market price.
+         */
+        BigDecimal reservedAmount = order.getLimitPrice()
+                .multiply(BigDecimal.valueOf(order.getQuantity()))
+                .setScale(2, RoundingMode.HALF_UP);
 
+        // The order cannot execute without enough market shares.
         if (player.getAvailableShares() < order.getQuantity()) {
             return;
         }
 
+        // Consume the reserved amount.
+        user.setReservedBalance(
+                user.getReservedBalance().subtract(reservedAmount)
+        );
+
+        // Charge the actual execution price.
         user.setWalletBalance(
                 user.getWalletBalance().subtract(totalCost)
         );
+
+        // If the actual execution price is lower than the limit price,
+        // return the unused reserved amount to the available wallet balance.
+        BigDecimal difference = reservedAmount.subtract(totalCost);
+
+        if (difference.compareTo(BigDecimal.ZERO) > 0) {
+            user.setWalletBalance(
+                    user.getWalletBalance().add(difference)
+            );
+        }
 
         player.setAvailableShares(
                 player.getAvailableShares() - order.getQuantity()
@@ -590,18 +681,22 @@ public class TradingServiceImpl implements TradingService {
                         .averageBuyPrice(BigDecimal.ZERO)
                         .build());
 
-        BigDecimal previousInvestment = holding.getAverageBuyPrice()
-                .multiply(BigDecimal.valueOf(holding.getShares()));
+        BigDecimal previousInvestment =
+                holding.getAverageBuyPrice()
+                        .multiply(BigDecimal.valueOf(holding.getShares()));
 
-        BigDecimal totalInvestment = previousInvestment.add(totalCost);
+        BigDecimal totalInvestment =
+                previousInvestment.add(totalCost);
 
-        int totalShares = holding.getShares() + order.getQuantity();
+        int totalShares =
+                holding.getShares() + order.getQuantity();
 
-        BigDecimal averagePrice = totalInvestment.divide(
-                BigDecimal.valueOf(totalShares),
-                2,
-                RoundingMode.HALF_UP
-        );
+        BigDecimal averagePrice =
+                totalInvestment.divide(
+                        BigDecimal.valueOf(totalShares),
+                        2,
+                        RoundingMode.HALF_UP
+                );
 
         holding.setShares(totalShares);
         holding.setAverageBuyPrice(averagePrice);
@@ -615,11 +710,11 @@ public class TradingServiceImpl implements TradingService {
                 .totalAmount(totalCost)
                 .build();
 
-        transactionRepository.save(transaction);
+        order.setStatus(OrderStatus.EXECUTED);
+
         holdingRepository.save(holding);
         userRepository.save(user);
-
-        order.setStatus(OrderStatus.EXECUTED);
+        transactionRepository.save(transaction);
         orderRepository.save(order);
     }
 
@@ -651,11 +746,12 @@ public class TradingServiceImpl implements TradingService {
                 .toList();
     }
 
+
     @Override
     @Transactional
     public void cancelOrder(String userEmail, Long orderId) {
 
-        User user = userRepository.findByEmail(userEmail)
+        User user = userRepository.findByEmailForUpdate(userEmail)
                 .orElseThrow(() -> new UserNotFoundException("User not found"));
 
         Order order = orderRepository.findById(orderId)
@@ -668,15 +764,41 @@ public class TradingServiceImpl implements TradingService {
         }
 
         if (order.getStatus() != OrderStatus.PENDING) {
-            throw new IllegalStateException(
+            throw new IllegalArgumentException(
                     "Only pending orders can be cancelled."
             );
+        }
+
+        /*
+         * LIMIT BUY orders reserve wallet funds.
+         * Release that reservation when the order is cancelled.
+         */
+        if (order.getTransactionType() == TransactionType.BUY &&
+                order.getOrderType() == OrderType.LIMIT) {
+
+            BigDecimal reservedAmount = order.getLimitPrice()
+                    .multiply(BigDecimal.valueOf(order.getQuantity()))
+                    .setScale(2, RoundingMode.HALF_UP);
+
+            BigDecimal newReservedBalance = user.getReservedBalance()
+                    .subtract(reservedAmount);
+
+            if (newReservedBalance.compareTo(BigDecimal.ZERO) < 0) {
+                newReservedBalance = BigDecimal.ZERO;
+            }
+
+            user.setReservedBalance(newReservedBalance);
+
+            userRepository.save(user);
         }
 
         order.setStatus(OrderStatus.CANCELLED);
 
         orderRepository.save(order);
     }
+
+
+
 
     @Override
     @Transactional
@@ -689,12 +811,45 @@ public class TradingServiceImpl implements TradingService {
 
         for (Order order : pendingOrders) {
 
-            if (order.getExpiresAt() != null &&
-                    order.getExpiresAt().isBefore(now)) {
-
-                order.setStatus(OrderStatus.EXPIRED);
-                orderRepository.save(order);
+            if (order.getExpiresAt() == null ||
+                    !order.getExpiresAt().isBefore(now)) {
+                continue;
             }
+
+            /*
+             * LIMIT BUY orders reserve wallet funds.
+             * Release the reservation before expiring the order.
+             */
+            if (order.getTransactionType() == TransactionType.BUY &&
+                    order.getOrderType() == OrderType.LIMIT) {
+
+                User user = userRepository.findByIdForUpdate(order.getUser().getId())
+                        .orElseThrow(() -> new UserNotFoundException(
+                                "User not found"
+                        ));
+
+                BigDecimal reservedAmount = order.getLimitPrice()
+                        .multiply(BigDecimal.valueOf(order.getQuantity()))
+                        .setScale(2, RoundingMode.HALF_UP);
+
+                BigDecimal newReservedBalance =
+                        user.getReservedBalance()
+                                .subtract(reservedAmount);
+
+                if (newReservedBalance.compareTo(BigDecimal.ZERO) < 0) {
+                    newReservedBalance = BigDecimal.ZERO;
+                }
+
+                user.setReservedBalance(newReservedBalance);
+
+                userRepository.save(user);
+            }
+
+            order.setStatus(OrderStatus.EXPIRED);
+
+            orderRepository.save(order);
         }
     }
+
+
 }

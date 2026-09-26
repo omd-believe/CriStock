@@ -30,4 +30,13 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
             Long userId,
             OrderStatus status
     );
+
+
+
+    List<Order> findByUser_IdAndPlayer_IdAndStatusAndTransactionType(
+            Long userId,
+            Long playerId,
+            OrderStatus status,
+            TransactionType transactionType
+    );
 }

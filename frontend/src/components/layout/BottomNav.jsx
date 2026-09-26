@@ -7,27 +7,7 @@ export default function BottomNav() {
     { path: '/portfolio', icon: PieChart, label: 'Portfolio' },
     { path: '/orders', icon: ClipboardList, label: 'Orders' },
     { path: '/watchlist', icon: Star, label: 'Watchlist' },
-    { path: '/leaderboard', icon: Trophy, label: 'Rankings' },
+    { path: '/leaderboard', icon: Trophy, label: 'Ranks' },
   ];
-
-  return (
-    <div className="md:hidden fixed bottom-0 left-0 right-0 bg-[#08111F] border-t border-white/5 px-6 py-3 z-50">
-      <div className="flex justify-around items-center">
-        {navItems.map((item) => (
-          <NavLink
-            key={item.path}
-            to={item.path}
-            className={({ isActive }) =>
-              `flex flex-col items-center gap-1 transition-colors ${
-                isActive ? 'text-cse-green' : 'text-white/40 hover:text-white/80'
-              }`
-            }
-          >
-            <item.icon size={20} />
-            <span className="text-[10px] font-medium tracking-wide uppercase">{item.label}</span>
-          </NavLink>
-        ))}
-      </div>
-    </div>
-  );
+  return <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/8 bg-[#07111f]/95 px-2 pb-[max(10px,env(safe-area-inset-bottom))] pt-2 backdrop-blur-xl md:hidden"><div className="mx-auto flex max-w-lg justify-around">{navItems.map(({path,icon:Icon,label}) => <NavLink key={path} to={path} className={({isActive}) => `flex min-w-14 flex-col items-center gap-1 rounded-xl px-2 py-1.5 transition ${isActive ? 'bg-cyan-300/8 text-cyan-200' : 'text-slate-600'}`}><Icon size={18}/><span className="text-[9px] font-bold uppercase tracking-wide">{label}</span></NavLink>)}</div></div>;
 }

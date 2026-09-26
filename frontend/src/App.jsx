@@ -11,6 +11,8 @@ import PortfolioPage from './pages/PortfolioPage';
 import LeaderboardPage from './pages/LeaderboardPage';
 import WatchlistPage from './pages/WatchlistPage';
 import OrdersPage from './pages/OrdersPage';
+import WalletPage from './pages/WalletPage';
+import ProfilePage from './pages/ProfilePage';
 
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated } = useAuth();
@@ -33,6 +35,8 @@ function AppRoutes() {
         <Route path="/player/:id" element={<PlayerDetailPage />} />
         <Route path="/portfolio" element={<PortfolioPage />} />
         <Route path="/orders" element={<OrdersPage />} />
+        <Route path="/wallet" element={<WalletPage />} />
+        <Route path="/profile" element={<ProfilePage />} />
         <Route path="/watchlist" element={<WatchlistPage />} />
         <Route path="/leaderboard" element={<LeaderboardPage />} />
       </Route>

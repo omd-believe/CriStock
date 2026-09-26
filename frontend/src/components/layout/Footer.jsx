@@ -5,9 +5,7 @@ export default function Footer() {
     <footer className="mt-16 pt-8 pb-12 border-t border-white/5 flex flex-col items-center justify-center text-center">
 
       <div className="flex items-center gap-2 mb-4">
-        <div className="w-8 h-8 rounded-full flex items-center justify-center bg-gradient-to-br from-[#00FF87] to-[#00C9FF] text-black font-bold text-xs shadow-[0_0_15px_rgba(0,255,135,0.3)]">
-          OMD
-        </div>
+        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-300 to-emerald-300 text-sm font-black text-[#06101b] shadow-lg shadow-cyan-950/30">CS</div>
         <span className="text-xl font-bold tracking-tight text-white">CriStock</span>
       </div>
 

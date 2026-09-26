@@ -1,6 +1,7 @@
 package com.cristock.security;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -22,18 +23,30 @@ import java.util.List;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    @Value("${cors.allowed-origins:http://localhost:5173}")
+    private String frontendUrl;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http
 
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+        http
+                .cors(cors ->
+                        cors.configurationSource(corsConfigurationSource())
+                )
 
                 .csrf(AbstractHttpConfigurer::disable)
 
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .sessionManagement(session ->
+                        session.sessionCreationPolicy(
+                                SessionCreationPolicy.STATELESS
+                        )
+                )
 
                 .authorizeHttpRequests(auth -> auth
+
+                        .requestMatchers("/api/health").permitAll()
+
+                        // Public endpoints
                         .requestMatchers(
                                 "/api/auth/**",
                                 "/swagger-ui/**",
@@ -41,38 +54,100 @@ public class SecurityConfig {
                                 "/swagger-ui.html",
                                 "/ws/**"
                         ).permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/players/**").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/players/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.PUT, "/api/players/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.DELETE, "/api/players/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.GET, "/api/leaderboard/**").permitAll()
-                        .requestMatchers("/api/trading/**").hasAnyRole("USER", "ADMIN")
-                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                        .anyRequest().authenticated()
+
+                        // Public player/leaderboard data
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/players/**"
+                        ).permitAll()
+
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/leaderboard/**"
+                        ).permitAll()
+
+                        // Admin-only player management
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/api/players/**"
+                        ).hasRole("ADMIN")
+
+                        .requestMatchers(
+                                HttpMethod.PUT,
+                                "/api/players/**"
+                        ).hasRole("ADMIN")
+
+                        .requestMatchers(
+                                HttpMethod.DELETE,
+                                "/api/players/**"
+                        ).hasRole("ADMIN")
+
+                        // All trading operations require authentication
+                        .requestMatchers("/api/trading/**")
+                        .authenticated()
+
+                        // Admin APIs
+                        .requestMatchers("/api/admin/**")
+                        .hasRole("ADMIN")
+
+                        // Everything else requires authentication
+                        .anyRequest()
+                        .authenticated()
                 )
 
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(
+                        jwtAuthenticationFilter,
+                        UsernamePasswordAuthenticationFilter.class
+                );
 
         return http.build();
     }
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
+
         CorsConfiguration configuration = new CorsConfiguration();
 
+        configuration.setAllowedOrigins(
+                List.of(frontendUrl)
+        );
 
-        configuration.setAllowedOrigins(List.of("http://localhost:5173"));
-        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept"));
+        configuration.setAllowedMethods(
+                List.of(
+                        "GET",
+                        "POST",
+                        "PUT",
+                        "DELETE",
+                        "OPTIONS"
+                )
+        );
+
+        configuration.setAllowedHeaders(
+                List.of(
+                        "Authorization",
+                        "Content-Type",
+                        "Accept"
+                )
+        );
+
         configuration.setAllowCredentials(true);
 
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
+        UrlBasedCorsConfigurationSource source =
+                new UrlBasedCorsConfigurationSource();
+
+        source.registerCorsConfiguration(
+                "/**",
+                configuration
+        );
+
         return source;
     }
 
     @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration configuration) throws Exception {
+    public AuthenticationManager authenticationManager(
+            AuthenticationConfiguration configuration
+    ) throws Exception {
+
         return configuration.getAuthenticationManager();
     }
 }

@@ -1,49 +1,78 @@
 import api from './axios';
+import { getPlayerImage } from '../data/playerImages';
 
 const displayRole = (role) => {
   if (!role) return '';
-  return role.replace('_', ' '); 
+
+  return role
+    .replace(/_/g, ' ')
+    .toLowerCase()
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
 };
 
 const mapPlayerToFrontend = (p) => {
   const currentPrice = Number(p.currentPrice) || 0;
   const previousPrice = Number(p.previousPrice) || currentPrice;
+
   const change = currentPrice - previousPrice;
-  const changePercent = previousPrice > 0 ? (change / previousPrice) * 100 : 0;
+
+  const changePercent =
+    previousPrice > 0
+      ? (change / previousPrice) * 100
+      : 0;
+
   return {
     id: p.id.toString(),
     name: p.name,
     team: p.team,
     country: p.country,
+
     role: displayRole(p.role),
-    rawRole: p.role,              
+    rawRole: p.role,
+
     price: currentPrice,
     change,
     changePercent: Number(changePercent.toFixed(2)),
     prevClose: previousPrice,
+
     sharesAvail: p.availableShares || 0,
     totalShares: p.totalShares || 0,
     marketCap: Number(p.marketCap || 0),
+
     active: p.active,
+
+    image: getPlayerImage(p.name),
+
     chartData: [],
   };
 };
 
 export const getPlayers = async () => {
   const { data } = await api.get('/players');
-  return Array.isArray(data) ? data.map(mapPlayerToFrontend) : [];
-};
 
+  return Array.isArray(data)
+    ? data.map(mapPlayerToFrontend)
+    : [];
+};
 
 export const getPlayerDetails = async (id) => {
   const { data } = await api.get(`/players/${id}`);
+
   return mapPlayerToFrontend(data);
 };
 
-
-export const getPlayerChart = async (id, timeframe = '1D') => {
+export const getPlayerChart = async (
+  id,
+  timeframe = '1D'
+) => {
   try {
-    const { data } = await api.get(`/players/${id}/chart`, { params: { timeframe } });
+    const { data } = await api.get(
+      `/players/${id}/chart`,
+      {
+        params: { timeframe },
+      }
+    );
+
     return Array.isArray(data) ? data : [];
   } catch (_) {
     return [];

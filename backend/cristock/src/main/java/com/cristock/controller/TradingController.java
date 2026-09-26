@@ -21,16 +21,17 @@ public class TradingController {
     private final TradingService tradingService;
 
     @PostMapping("/buy")
-    public Object buyShares(
+    public ResponseEntity<Object> buyShares(
             Authentication authentication,
-            @Valid @RequestBody TradingRequest request) {
-
-        return tradingService.buyShares(
-                authentication.getName(),
-                request
+            @Valid @RequestBody TradingRequest request
+    ) {
+        return ResponseEntity.ok(
+                tradingService.buyShares(
+                        authentication.getName(),
+                        request
+                )
         );
     }
-
 
     @PostMapping("/sell")
     public ResponseEntity<Object> sellShares(
@@ -38,24 +39,32 @@ public class TradingController {
             Authentication authentication
     ) {
         return ResponseEntity.ok(
-                tradingService.sellShares(authentication.getName(), request)
+                tradingService.sellShares(
+                        authentication.getName(),
+                        request
+                )
         );
     }
 
     @GetMapping("/portfolio")
-    public PortfolioResponse getPortfolio(Authentication authentication) {
-
-        return tradingService.getPortfolio(
-                authentication.getName()
+    public ResponseEntity<PortfolioResponse> getPortfolio(
+            Authentication authentication
+    ) {
+        return ResponseEntity.ok(
+                tradingService.getPortfolio(
+                        authentication.getName()
+                )
         );
     }
 
     @GetMapping("/history")
-    public List<TransactionResponse> getTransactionHistory(
-            Authentication authentication) {
-
-        return tradingService.getTransactionHistory(
-                authentication.getName()
+    public ResponseEntity<List<TransactionResponse>> getTransactionHistory(
+            Authentication authentication
+    ) {
+        return ResponseEntity.ok(
+                tradingService.getTransactionHistory(
+                        authentication.getName()
+                )
         );
     }
 
@@ -63,9 +72,10 @@ public class TradingController {
     public ResponseEntity<List<OrderResponse>> getOrders(
             Authentication authentication
     ) {
-
         return ResponseEntity.ok(
-                tradingService.getOrders(authentication.getName())
+                tradingService.getOrders(
+                        authentication.getName()
+                )
         );
     }
 
@@ -74,7 +84,6 @@ public class TradingController {
             @PathVariable Long orderId,
             Authentication authentication
     ) {
-
         tradingService.cancelOrder(
                 authentication.getName(),
                 orderId

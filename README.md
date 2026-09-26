@@ -464,3 +464,95 @@ CORS on the backend is locked to the production frontend origin (`https://cristo
 <p align="center">
   <sub>If this project helped you or you found it interesting, consider giving it a ⭐ — it genuinely helps visibility.</sub>
 </p>
+
+---
+
+## 🚀 V2 Improvements
+
+V2 evolves CriStock from a basic virtual cricket stock market into a more complete
+trading platform with order management, stronger transaction consistency,
+a redesigned trading interface, and deployment-ready infrastructure.
+
+### 💹 Advanced Trading
+
+- Market BUY and SELL orders
+- LIMIT BUY and SELL orders
+- Pending order management
+- Order cancellation
+- Automatic 24-hour pending-order expiry
+- Reserved wallet balance for pending LIMIT BUY orders
+- LIMIT BUY execution when the market price reaches the requested limit
+- LIMIT SELL execution when the market price reaches the requested limit
+- Execution at the current market price when a pending order is triggered
+- Transaction history for executed trades
+
+### 🔒 Trading Consistency
+
+- Optimistic locking for concurrent updates
+- Pessimistic locking for balance-sensitive operations
+- Atomic transactional trading flows
+- Maximum trade quantity validation
+- Insufficient balance and share validation
+- Price-history recording after market price updates
+- Conflict handling for concurrent database updates
+- Post-transaction WebSocket price notifications
+
+### 📊 Market Experience
+
+- Player search across name, team, country, and role
+- Role/category filtering
+- Top Gainers and Top Losers views
+- Price and percentage-change sorting
+- Player watchlist
+- Real-time market price updates
+- Player-specific price charts
+- Player photographs and fallback images
+- Improved player detail pages
+
+### 💼 Wallet & Account Experience
+
+- Dedicated Wallet page
+- Available balance calculation
+- Reserved balance visibility
+- Portfolio value overview
+- Holdings summary
+- Profit/loss information
+- Dedicated Profile page
+- Account activity overview
+- Open-order visibility
+
+### 🎨 V2 Frontend Redesign
+
+- Responsive trading-terminal interface
+- Desktop sidebar navigation
+- Mobile bottom navigation
+- Responsive market cards
+- Improved trading modals
+- Improved toast notifications
+- Animated `#Believe` header branding
+- Responsive player detail interface
+- Mobile-friendly layouts across the application
+- Player image support for all seeded players
+
+### 🚀 Deployment Improvements
+
+- Spring Boot health endpoint at `/api/health`
+- Environment-based CORS configuration
+- Environment-based frontend API configuration
+- Environment-based WebSocket configuration
+- Render Docker deployment configuration
+- Production-ready Docker setup
+- Local environment files excluded from Git
+- Local Spring credentials excluded from Git
+- Maven build artifacts excluded from Git
+- IDE configuration excluded from Git
+
+### 🛡️ Security & Configuration
+
+- JWT-based authentication remains protected
+- Trading endpoints require authentication
+- Administrative endpoints remain restricted to administrators
+- Public market/player GET endpoints remain accessible
+- CORS origin is configurable through `FRONTEND_URL`
+- Sensitive local configuration is kept outside version control
+
